@@ -21,9 +21,7 @@ app.add_middleware(
 )
 
 print("ANTES DE CARGAR MODELO")
-print("Archivos en carpeta:")
-print(os.listdir("."))
-print("Tamaño:", os.path.getsize("modelo_lsm.keras"))
+
 modelo = tf.keras.models.load_model("modelo_lsm.keras", compile=False)
 
 print("DESPUÉS DE CARGAR MODELO")
