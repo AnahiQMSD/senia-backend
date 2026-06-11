@@ -1,5 +1,6 @@
-tensorflow-cpu
-numpy==1.26.4
 fastapi
 uvicorn
-scikit-learn==1.7.2
+tensorflow-cpu
+numpy
+scikit-learn
+h5py

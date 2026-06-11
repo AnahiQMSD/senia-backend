@@ -1,12 +1,10 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+import tensorflow as tf
 import numpy as np
 import pickle
-import tensorflow as tf
-from threading import Lock
 import traceback
-import os
 
 app = FastAPI()
 
@@ -20,6 +18,18 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# ==========================
+# Cargar modelo y encoder
+# ==========================
+print("📦 Cargando modelo...")
+
+modelo = tf.keras.models.load_model("modelo_lsm.keras")
+
+with open("label_encoder.pkl", "rb") as f:
+    le = pickle.load(f)
+
+print("✅ Modelo cargado correctamente")
 
 
 # ==========================
@@ -36,39 +46,12 @@ def health():
 
 
 # ==========================
-# Cargar modelo
-# ==========================
-print("🚀 Iniciando API...")
-print("PID:", os.getpid())
-
-print("📦 Cargando modelo TFLite...")
-
-interpreter = tf.lite.Interpreter(model_path="modelo_lsm.tflite")
-
-interpreter.allocate_tensors()
-
-input_details = interpreter.get_input_details()
-output_details = interpreter.get_output_details()
-
-print("📦 Cargando LabelEncoder...")
-
-with open("label_encoder.pkl", "rb") as f:
-    le = pickle.load(f)
-
-print("✅ Modelo listo")
-
-# Lock para evitar concurrencia
-interpreter_lock = Lock()
-
-
-# ==========================
 # Predicción
 # ==========================
 @app.post("/predict")
 def predict(data: dict):
-
     try:
-        # Validar entrada
+        # Verificar que venga sequence
         if "sequence" not in data:
             return JSONResponse(
                 status_code=400, content={"error": "No se recibió 'sequence'"}
@@ -78,36 +61,28 @@ def predict(data: dict):
 
         print("Shape recibido:", sequence.shape)
 
+        # Validar shape esperado
         if sequence.shape != (20, 135):
-            print("❌ Shape incorrecto:", sequence.shape)
-
             return JSONResponse(
                 status_code=400,
                 content={"error": f"shape incorrecto: {sequence.shape}"},
             )
 
+        # Agregar dimensión batch
         sequence = np.expand_dims(sequence, axis=0)
 
-        # Evitar acceso simultáneo al intérprete
-        with interpreter_lock:
-
-            interpreter.set_tensor(input_details[0]["index"], sequence)
-
-            interpreter.invoke()
-
-            pred = interpreter.get_tensor(output_details[0]["index"])
+        # Predicción
+        pred = modelo.predict(sequence, verbose=0)
 
         idx = int(np.argmax(pred))
-        label = le.inverse_transform([idx])[0]
         confidence = float(np.max(pred))
+        label = le.inverse_transform([idx])[0]
 
-        print(f"✅ Predicción: {label} | " f"Confianza: {confidence:.4f}")
+        print(f"Predicción: {label} | " f"Confianza: {confidence:.4f}")
 
         return {"label": label, "confidence": confidence}
 
     except Exception as e:
-
-        print("❌ ERROR EN /predict")
         traceback.print_exc()
 
         return JSONResponse(status_code=500, content={"error": str(e)})
