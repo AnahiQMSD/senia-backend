@@ -2,15 +2,16 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import tensorflow as tf
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+import tensorflow as tf
 import numpy as np
 import pickle
 import traceback
 
 app = FastAPI()
 
-# ==========================
-# CORS
-# ==========================
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -19,12 +20,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ==========================
-# Cargar modelo y encoder
-# ==========================
 print("📦 Cargando modelo...")
 
-modelo = tf.keras.models.load_model("modelo_lsm.keras")
+modelo = tf.keras.models.load_model("modelo_lsm.keras", compile=False)
 
 with open("label_encoder.pkl", "rb") as f:
     le = pickle.load(f)
@@ -32,9 +30,6 @@ with open("label_encoder.pkl", "rb") as f:
 print("✅ Modelo cargado correctamente")
 
 
-# ==========================
-# Rutas de prueba
-# ==========================
 @app.get("/")
 def root():
     return {"status": "ok"}
@@ -45,13 +40,9 @@ def health():
     return {"status": "healthy"}
 
 
-# ==========================
-# Predicción
-# ==========================
 @app.post("/predict")
 def predict(data: dict):
     try:
-        # Verificar que venga sequence
         if "sequence" not in data:
             return JSONResponse(
                 status_code=400, content={"error": "No se recibió 'sequence'"}
@@ -61,17 +52,14 @@ def predict(data: dict):
 
         print("Shape recibido:", sequence.shape)
 
-        # Validar shape esperado
         if sequence.shape != (20, 135):
             return JSONResponse(
                 status_code=400,
                 content={"error": f"shape incorrecto: {sequence.shape}"},
             )
 
-        # Agregar dimensión batch
         sequence = np.expand_dims(sequence, axis=0)
 
-        # Predicción
         pred = modelo.predict(sequence, verbose=0)
 
         idx = int(np.argmax(pred))
