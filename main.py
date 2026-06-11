@@ -22,7 +22,7 @@ app.add_middleware(
 
 print("ANTES DE CARGAR MODELO")
 
-modelo = tf.keras.models.load_model("modelo_lsm.keras", compile=False)
+modelo = tf.keras.models.load_model("modelo_render.h5", compile=False)
 
 print("DESPUÉS DE CARGAR MODELO")
 
