@@ -2,17 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import numpy as np
 import pickle
-
-try:
-    # En Render usa tflite-runtime (ligero)
-    import tflite_runtime.interpreter as tflite
-
-    Interpreter = tflite.Interpreter
-except ImportError:
-    # En local usa tensorflow (ya instalado)
-    import tensorflow as tf
-
-    Interpreter = tf.lite.Interpreter
+import tensorflow as tf
 
 app = FastAPI()
 
@@ -26,7 +16,7 @@ app.add_middleware(
 
 print("🚀 Cargando modelo TFLite...")
 
-interpreter = Interpreter(model_path="modelo_lsm.tflite")
+interpreter = tf.lite.Interpreter(model_path="modelo_lsm.tflite")
 interpreter.allocate_tensors()
 input_details = interpreter.get_input_details()
 output_details = interpreter.get_output_details()
