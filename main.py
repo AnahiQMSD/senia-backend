@@ -43,6 +43,7 @@ def predict(data: dict):
 
         label = le.inverse_transform([np.argmax(pred)])[0]
         confidence = float(np.max(pred))
+        print(f"Predicción: {label}, confianza: {confidence:.4f}")
 
         return {"label": label, "confidence": confidence}
 
